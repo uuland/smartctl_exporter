@@ -1,4 +1,4 @@
-module github.com/Sheridan/smartctl_exporter
+module github.com/uuland/smartctl_exporter
 
 go 1.14
 
