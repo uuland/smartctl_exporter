@@ -16,18 +16,21 @@ var (
 
 // SMARTOptions is a inner representation of a options
 type SMARTOptions struct {
-	BindTo                string `yaml:"bind_to"`
-	URLPath               string `yaml:"url_path"`
-	FakeJSON              bool   `yaml:"fake_json"`
-	SMARTctlLocation      string `yaml:"smartctl_location"`
-	CollectPeriod         string `yaml:"collect_not_more_than_period"`
-	CollectPeriodDuration time.Duration
-	Devices               []string `yaml:"devices"`
+	BindTo           string   `yaml:"bind_to"`
+	PushTo           string   `yaml:"push_to"`
+	URLPath          string   `yaml:"url_path"`
+	FakeJSON         bool     `yaml:"fake_json"`
+	SMARTctlLocation string   `yaml:"smartctl_location"`
+	PushInterval     string   `yaml:"push_interval"`
+	CollectPeriod    string   `yaml:"collect_not_more_than_period"`
+	Devices          []string `yaml:"devices"`
 }
 
 // Options is a representation of a options
 type Options struct {
-	SMARTctl SMARTOptions `yaml:"smartctl_exporter"`
+	SMARTctl              SMARTOptions `yaml:"smartctl_exporter"`
+	PushIntervalDuration  time.Duration
+	CollectPeriodDuration time.Duration
 }
 
 // Parse options from yaml config file
@@ -52,12 +55,13 @@ func loadOptions() Options {
 	}
 
 	opts := Options{
-		SMARTOptions{
+		SMARTctl: SMARTOptions{
 			BindTo:           "9633",
 			URLPath:          "/metrics",
 			FakeJSON:         false,
 			SMARTctlLocation: "/usr/sbin/smartctl",
-			CollectPeriod:    "60s",
+			PushInterval:     "30s",
+			CollectPeriod:    "10m",
 			Devices:          []string{},
 		},
 	}
@@ -66,12 +70,17 @@ func loadOptions() Options {
 		logger.Panic("Failed parse %s: %s", configFile, err)
 	}
 
-	d, err := time.ParseDuration(opts.SMARTctl.CollectPeriod)
-	if err != nil {
-		logger.Panic("Failed read collect_not_more_than_period (%s): %s", opts.SMARTctl.CollectPeriod, err)
+	if d, err := time.ParseDuration(opts.SMARTctl.PushInterval); err != nil {
+		logger.Panic("Failed read push_interval (%s): %s", opts.SMARTctl.CollectPeriod, err)
+	} else {
+		opts.PushIntervalDuration = d
 	}
 
-	opts.SMARTctl.CollectPeriodDuration = d
+	if d, err := time.ParseDuration(opts.SMARTctl.CollectPeriod); err != nil {
+		logger.Panic("Failed read collect_not_more_than_period (%s): %s", opts.SMARTctl.CollectPeriod, err)
+	} else {
+		opts.CollectPeriodDuration = d
+	}
 
 	logger.Debug("Parsed options: %s", opts)
 	return opts

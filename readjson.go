@@ -47,25 +47,35 @@ func readFakeSMARTctl(device string) gjson.Result {
 }
 
 // Get json from smartctl and parse it
-func readSMARTctl(device string) (gjson.Result, bool) {
+func readSMARTctl(device string) (gjson.Result, bool, error) {
 	logger.Debug("Collecting S.M.A.R.T. counters, device: %s", device)
 	out, err := exec.Command(options.SMARTctl.SMARTctlLocation, "--json", "--xall", device).Output()
 	if err != nil {
+		if exitError, ok := err.(*exec.ExitError); ok {
+			if exitError.ExitCode() == 4 {
+				logger.Info("exitError %s", exitError.String())
+				goto CONTINUE
+			}
+		}
 		logger.Warning("S.M.A.R.T. output reading error: %s", err)
+		return gjson.Result{}, false, err
 	}
+
+CONTINUE:
 	json := parseJSON(string(out))
 	rcOk := resultCodeIsOk(json.Get("smartctl.exit_status").Int())
 	jsonOk := jsonIsOk(json)
-	return json, rcOk && jsonOk
+	return json, rcOk && jsonOk, nil
 }
 
-func readSMARTctlDevices() gjson.Result {
+func readSMARTctlDevices() (gjson.Result, error) {
 	logger.Debug("Collecting devices")
 	out, err := exec.Command(options.SMARTctl.SMARTctlLocation, "--json", "--scan-open").Output()
 	if err != nil {
 		logger.Warning("S.M.A.R.T. output reading error: %s", err)
+		return gjson.Result{}, err
 	}
-	return parseJSON(string(out))
+	return parseJSON(string(out)), nil
 }
 
 // Select json source and parse
@@ -74,26 +84,31 @@ func readData(device string) (gjson.Result, error) {
 		return readFakeSMARTctl(device), nil
 	}
 
-	if _, err := os.Stat(device); err == nil {
-		cacheValue, cacheOk := jsonCache[device]
-		timeToScan := false
-		if cacheOk {
-			timeToScan = time.Now().After(cacheValue.LastCollect.Add(options.SMARTctl.CollectPeriodDuration))
-		} else {
-			timeToScan = true
-		}
-
-		if timeToScan {
-			json, ok := readSMARTctl(device)
-			if ok {
-				jsonCache[device] = JSONCache{JSON: json, LastCollect: time.Now()}
-				return jsonCache[device].JSON, nil
-			}
-			return gjson.Parse("{}"), fmt.Errorf("smartctl returned bad data for device %s", device)
-		}
-		return gjson.Parse("{}"), fmt.Errorf("Too early collect called for device %s", device)
+	if _, err := os.Stat(device); err != nil {
+		return gjson.Result{}, fmt.Errorf("device %s unavialable", device)
 	}
-	return gjson.Parse("{}"), fmt.Errorf("Device %s unavialable", device)
+
+	cacheValue, cacheOk := jsonCache[device]
+	timeToScan := false
+	if cacheOk {
+		timeToScan = time.Now().After(cacheValue.LastCollect.Add(options.CollectPeriodDuration))
+	} else {
+		timeToScan = true
+	}
+
+	if !timeToScan {
+		logger.Verbose("Read cached S.M.A.R.T. data, saved at %s", cacheValue.LastCollect.String())
+		return cacheValue.JSON, nil
+	}
+
+	json, ok, err := readSMARTctl(device)
+	if err != nil {
+		return gjson.Result{}, err
+	} else if ok {
+		jsonCache[device] = JSONCache{JSON: json, LastCollect: time.Now()}
+		return json, nil
+	}
+	return gjson.Result{}, fmt.Errorf("smartctl returned bad data for device %s", device)
 }
 
 // Parse smartctl return code

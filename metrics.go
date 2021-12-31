@@ -16,6 +16,17 @@ var (
 		},
 		nil,
 	)
+	metricDeviceExitStatus = prometheus.NewDesc(
+		"smartctl_exit_status",
+		"Exit status of smartctl on device",
+		[]string{
+			"device",
+			"model_family",
+			"model_name",
+			"serial_number",
+		},
+		nil,
+	)
 	metricDeviceModel = prometheus.NewDesc(
 		"smartctl_device",
 		"Device info",
@@ -170,17 +181,6 @@ var (
 	metricDeviceSmartStatus = prometheus.NewDesc(
 		"smartctl_device_smart_status",
 		"General smart status",
-		[]string{
-			"device",
-			"model_family",
-			"model_name",
-			"serial_number",
-		},
-		nil,
-	)
-	metricDeviceExitStatus = prometheus.NewDesc(
-		"smartctl_device_smartctl_exit_status",
-		"Exit status of smartctl on device",
 		[]string{
 			"device",
 			"model_family",
