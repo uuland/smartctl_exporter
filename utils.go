@@ -34,3 +34,13 @@ func getLongFlags(json gjson.Result, flags []string) string {
 	}
 	return strings.Join(result, ",")
 }
+
+// getATAStatisticsValue search page & table in ata statistics
+func getATAStatisticsValue(find gjson.Result, pageName string, tableName string) gjson.Result {
+	return find.Get(
+		"ata_device_statistics" +
+			".pages.#(name==\"" + pageName +
+			"\").table.#(name==\"" + tableName +
+			"\").value",
+	)
+}

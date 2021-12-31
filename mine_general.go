@@ -25,19 +25,6 @@ func (smart *SMARTctl) mineDevice() {
 	)
 }
 
-func (smart *SMARTctl) mineDeviceStatus() {
-	status := smart.json.Get("smart_status")
-	smart.ch <- prometheus.MustNewConstMetric(
-		metricDeviceStatus,
-		prometheus.GaugeValue,
-		status.Get("passed").Float(),
-		smart.device.device,
-		smart.device.family,
-		smart.device.model,
-		smart.device.serial,
-	)
-}
-
 func (smart *SMARTctl) mineSmartStatus() {
 	smart.ch <- prometheus.MustNewConstMetric(
 		metricDeviceSmartStatus,
@@ -76,6 +63,20 @@ func (smart *SMARTctl) minePowerOnSeconds() {
 }
 
 func (smart *SMARTctl) mineCapacity() {
+	if smart.isNVMe() {
+		capacity := smart.json.Get("nvme_total_capacity")
+		smart.ch <- prometheus.MustNewConstMetric(
+			metricDeviceCapacityBytes,
+			prometheus.GaugeValue,
+			capacity.Float(),
+			smart.device.device,
+			smart.device.family,
+			smart.device.model,
+			smart.device.serial,
+		)
+		return
+	}
+
 	capacity := smart.json.Get("user_capacity")
 	smart.ch <- prometheus.MustNewConstMetric(
 		metricDeviceCapacityBlocks,
@@ -109,23 +110,6 @@ func (smart *SMARTctl) mineCapacity() {
 	}
 }
 
-func (smart *SMARTctl) mineInterfaceSpeed() {
-	iSpeed := smart.json.Get("interface_speed")
-	for _, speedType := range []string{"max", "current"} {
-		tSpeed := iSpeed.Get(speedType)
-		smart.ch <- prometheus.MustNewConstMetric(
-			metricDeviceInterfaceSpeed,
-			prometheus.GaugeValue,
-			tSpeed.Get("units_per_second").Float()*tSpeed.Get("bits_per_unit").Float(),
-			smart.device.device,
-			smart.device.family,
-			smart.device.model,
-			smart.device.serial,
-			speedType,
-		)
-	}
-}
-
 func (smart *SMARTctl) mineTemperatures() {
 	temperatures := smart.json.Get("temperature")
 	if temperatures.Exists() {
@@ -142,20 +126,5 @@ func (smart *SMARTctl) mineTemperatures() {
 			)
 			return true
 		})
-	}
-}
-
-func (smart *SMARTctl) mineRotationRate() {
-	rRate := getFloatIfExists(smart.json, "rotation_rate", 0)
-	if rRate > 0 {
-		smart.ch <- prometheus.MustNewConstMetric(
-			metricDeviceRotationRate,
-			prometheus.GaugeValue,
-			rRate,
-			smart.device.device,
-			smart.device.family,
-			smart.device.model,
-			smart.device.serial,
-		)
 	}
 }

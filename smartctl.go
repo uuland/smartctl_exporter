@@ -10,6 +10,7 @@ import (
 // SMARTDevice - short info about device
 type SMARTDevice struct {
 	device string
+	proto  string
 	serial string
 	family string
 	model  string
@@ -29,6 +30,7 @@ func NewSMARTctl(json gjson.Result, ch chan<- prometheus.Metric) SMARTctl {
 	smart.json = json
 	smart.device = SMARTDevice{
 		device: strings.TrimSpace(smart.json.Get("device.name").String()),
+		proto:  strings.TrimSpace(smart.json.Get("device.protocol").String()),
 		serial: strings.TrimSpace(smart.json.Get("serial_number").String()),
 		family: strings.TrimSpace(smart.json.Get("model_family").String()),
 		model:  strings.TrimSpace(smart.json.Get("model_name").String()),
@@ -40,31 +42,32 @@ func NewSMARTctl(json gjson.Result, ch chan<- prometheus.Metric) SMARTctl {
 func (smart *SMARTctl) Collect() {
 	logger.Verbose("Collecting metrics from %s: %s, %s", smart.device.device, smart.device.family, smart.device.model)
 	smart.mineExitStatus()
+
 	smart.mineDevice()
 	smart.mineCapacity()
-	smart.mineInterfaceSpeed()
-	smart.mineDeviceAttribute()
-	smart.minePowerOnSeconds()
-	smart.mineRotationRate()
-	smart.mineTemperatures()
-	smart.minePowerCycleCount()
-	smart.mineDeviceSCTStatus()
-	smart.mineDeviceStatistics()
-	smart.mineNvmeSmartHealthInformationLog()
-	smart.mineNvmeSmartStatus()
-	smart.mineDeviceStatus()
-	smart.mineDeviceErrorLog()
-	smart.mineDeviceSelfTestLog()
-	smart.mineDeviceERC()
-	smart.minePercentageUsed()
-	smart.mineAvailableSpare()
-	smart.mineAvailableSpareThreshold()
-	smart.mineCriticalWarning()
-	smart.mineMediaErrors()
-	smart.mineNumErrLogEntries()
-	smart.mineBytesRead()
-	smart.mineBytesWritten()
 	smart.mineSmartStatus()
+	smart.minePowerCycleCount()
+	smart.minePowerOnSeconds()
+	smart.mineTemperatures()
+
+	smart.minePercentageUsed()
+	smart.mineBytesRead()
+	smart.mineCommandsRead()
+	smart.mineBytesWritten()
+	smart.mineCommandsWritten()
+
+	if smart.isNVMe() {
+		smart.mineNVMeHealthInformationLog()
+	} else {
+		smart.mineRotationRate()
+		smart.mineInterfaceSpeed()
+		smart.mineDeviceAttribute()
+		smart.mineDeviceSCTStatus()
+		smart.mineDeviceStatistics()
+		smart.mineDeviceErrorLog()
+		smart.mineDeviceSelfTestLog()
+		smart.mineDeviceERC()
+	}
 
 }
 
@@ -78,4 +81,8 @@ func (smart *SMARTctl) mineExitStatus() {
 		smart.device.model,
 		smart.device.serial,
 	)
+}
+
+func (smart *SMARTctl) isNVMe() bool {
+	return smart.device.proto == "NVMe"
 }

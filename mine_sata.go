@@ -5,6 +5,38 @@ import (
 	"strings"
 )
 
+func (smart *SMARTctl) mineRotationRate() {
+	rRate := getFloatIfExists(smart.json, "rotation_rate", 0)
+	if rRate > 0 {
+		smart.ch <- prometheus.MustNewConstMetric(
+			metricDeviceRotationRate,
+			prometheus.GaugeValue,
+			rRate,
+			smart.device.device,
+			smart.device.family,
+			smart.device.model,
+			smart.device.serial,
+		)
+	}
+}
+
+func (smart *SMARTctl) mineInterfaceSpeed() {
+	iSpeed := smart.json.Get("interface_speed")
+	for _, speedType := range []string{"max", "current"} {
+		tSpeed := iSpeed.Get(speedType)
+		smart.ch <- prometheus.MustNewConstMetric(
+			metricDeviceInterfaceSpeed,
+			prometheus.GaugeValue,
+			tSpeed.Get("units_per_second").Float()*tSpeed.Get("bits_per_unit").Float(),
+			smart.device.device,
+			smart.device.family,
+			smart.device.model,
+			smart.device.serial,
+			speedType,
+		)
+	}
+}
+
 func (smart *SMARTctl) mineDeviceAttribute() {
 	for _, attribute := range smart.json.Get("ata_smart_attributes.table").Array() {
 		name := strings.TrimSpace(attribute.Get("name").String())
@@ -44,7 +76,7 @@ func (smart *SMARTctl) mineDeviceAttribute() {
 
 func (smart *SMARTctl) mineDeviceStatistics() {
 	for _, page := range smart.json.Get("ata_device_statistics.pages").Array() {
-		table := strings.TrimSpace(page.Get("name").String())
+		table := strings.ReplaceAll(strings.TrimSpace(page.Get("name").String()), " ", "_")
 		for _, statistic := range page.Get("table").Array() {
 			smart.ch <- prometheus.MustNewConstMetric(
 				metricDeviceStatistics,
@@ -55,7 +87,7 @@ func (smart *SMARTctl) mineDeviceStatistics() {
 				smart.device.model,
 				smart.device.serial,
 				table,
-				strings.TrimSpace(statistic.Get("name").String()),
+				strings.ReplaceAll(strings.TrimSpace(statistic.Get("name").String()), " ", "_"),
 				strings.TrimSpace(statistic.Get("flags.string").String()),
 				getLongFlags(statistic.Get("flags"), []string{
 					"valid",

@@ -95,6 +95,33 @@ var (
 		},
 		nil,
 	)
+	metricDeviceStatistics = prometheus.NewDesc(
+		"smartctl_device_statistics",
+		"Device statistics",
+		[]string{
+			"device",
+			"model_family",
+			"model_name",
+			"serial_number",
+			"statistic_table",
+			"statistic_name",
+			"statistic_flags_short",
+			"statistic_flags_long",
+		},
+		nil,
+	)
+	metricNVMeHealthLog = prometheus.NewDesc(
+		"smartctl_device_nvme_health",
+		"NVMe Device health information log",
+		[]string{
+			"device",
+			"model_family",
+			"model_name",
+			"serial_number",
+			"health_log_name",
+		},
+		nil,
+	)
 	metricDevicePowerOnSeconds = prometheus.NewDesc(
 		"smartctl_device_power_on_seconds",
 		"Device power on seconds",
@@ -140,94 +167,6 @@ var (
 		},
 		nil,
 	)
-	metricDevicePercentageUsed = prometheus.NewDesc(
-		"smartctl_device_percentage_used",
-		"Device write percentage used",
-		[]string{
-			"device",
-			"model_family",
-			"model_name",
-			"serial_number",
-		},
-		nil,
-	)
-	metricDeviceAvailableSpare = prometheus.NewDesc(
-		"smartctl_device_available_spare",
-		"Normalized percentage (0 to 100%) of the remaining spare capacity available",
-		[]string{
-			"device",
-			"model_family",
-			"model_name",
-			"serial_number",
-		},
-		nil,
-	)
-	metricDeviceAvailableSpareThreshold = prometheus.NewDesc(
-		"smartctl_device_available_spare_threshold",
-		"When the Available Spare falls below the threshold indicated in this field, an asynchronous event completion may occur. The value is indicated as a normalized percentage (0 to 100%)",
-		[]string{
-			"device",
-			"model_family",
-			"model_name",
-			"serial_number",
-		},
-		nil,
-	)
-	metricDeviceCriticalWarning = prometheus.NewDesc(
-		"smartctl_device_critical_warning",
-		"This field indicates critical warnings for the state of the controller",
-		[]string{
-			"device",
-			"model_family",
-			"model_name",
-			"serial_number",
-		},
-		nil,
-	)
-	metricDeviceMediaErrors = prometheus.NewDesc(
-		"smartctl_device_media_errors",
-		"Contains the number of occurrences where the controller detected an unrecovered data integrity error. Errors such as uncorrectable ECC, CRC checksum failure, or LBA tag mismatch are included in this field",
-		[]string{
-			"device",
-			"model_family",
-			"model_name",
-			"serial_number",
-		},
-		nil,
-	)
-	metricDeviceNumErrLogEntries = prometheus.NewDesc(
-		"smartctl_device_num_err_log_entries",
-		"Contains the number of Error Information log entries over the life of the controller",
-		[]string{
-			"device",
-			"model_family",
-			"model_name",
-			"serial_number",
-		},
-		nil,
-	)
-	metricDeviceBytesRead = prometheus.NewDesc(
-		"smartctl_device_bytes_read",
-		"",
-		[]string{
-			"device",
-			"model_family",
-			"model_name",
-			"serial_number",
-		},
-		nil,
-	)
-	metricDeviceBytesWritten = prometheus.NewDesc(
-		"smartctl_device_bytes_written",
-		"",
-		[]string{
-			"device",
-			"model_family",
-			"model_name",
-			"serial_number",
-		},
-		nil,
-	)
 	metricDeviceSmartStatus = prometheus.NewDesc(
 		"smartctl_device_smart_status",
 		"General smart status",
@@ -261,54 +200,6 @@ var (
 		},
 		nil,
 	)
-	metricDeviceStatistics = prometheus.NewDesc(
-		"smartctl_device_statistics",
-		"Device statistics",
-		[]string{
-			"device",
-			"model_family",
-			"model_name",
-			"serial_number",
-			"statistic_table",
-			"statistic_name",
-			"statistic_flags_short",
-			"statistic_flags_long",
-		},
-		nil,
-	)
-	metricCriticalWarning = prometheus.NewDesc(
-		"critical_warning",
-		"Critical warning counter",
-		[]string{
-			"device",
-			"model_family",
-			"model_name",
-			"serial_number",
-		},
-		nil,
-	)
-	metricDeviceStatus = prometheus.NewDesc(
-		"smartctl_device_status",
-		"Device status",
-		[]string{
-			"device",
-			"model_family",
-			"model_name",
-			"serial_number",
-		},
-		nil,
-	)
-	metricAvailableSpare = prometheus.NewDesc(
-		"available_spare",
-		"Available spare",
-		[]string{
-			"device",
-			"model_family",
-			"model_name",
-			"serial_number",
-		},
-		nil,
-	)
 	metricDeviceErrorLogCount = prometheus.NewDesc(
 		"smartctl_device_error_log_count",
 		"Device SMART error log count",
@@ -321,17 +212,6 @@ var (
 		},
 		nil,
 	)
-	metricMediaErrors = prometheus.NewDesc(
-		"media_errors",
-		"Media errors counter",
-		[]string{
-			"device",
-			"model_family",
-			"model_name",
-			"serial_number",
-		},
-		nil,
-	)
 	metricDeviceSelfTestLogCount = prometheus.NewDesc(
 		"smartctl_device_self_test_log_count",
 		"Device SMART self test log count",
@@ -341,17 +221,6 @@ var (
 			"model_name",
 			"serial_number",
 			"self_test_log_type",
-		},
-		nil,
-	)
-	metricSmartStatus = prometheus.NewDesc(
-		"smart_status",
-		"Smart status",
-		[]string{
-			"device",
-			"model_family",
-			"model_name",
-			"serial_number",
 		},
 		nil,
 	)
@@ -376,6 +245,61 @@ var (
 			"model_name",
 			"serial_number",
 			"op_type",
+		},
+		nil,
+	)
+	metricDevicePercentageUsed = prometheus.NewDesc(
+		"smartctl_device_percentage_used",
+		"Device write percentage used",
+		[]string{
+			"device",
+			"model_family",
+			"model_name",
+			"serial_number",
+		},
+		nil,
+	)
+	metricDeviceBytesRead = prometheus.NewDesc(
+		"smartctl_device_bytes_read",
+		"",
+		[]string{
+			"device",
+			"model_family",
+			"model_name",
+			"serial_number",
+		},
+		nil,
+	)
+	metricDeviceBytesWritten = prometheus.NewDesc(
+		"smartctl_device_bytes_written",
+		"",
+		[]string{
+			"device",
+			"model_family",
+			"model_name",
+			"serial_number",
+		},
+		nil,
+	)
+	metricDeviceCommandsRead = prometheus.NewDesc(
+		"smartctl_device_commands_read",
+		"",
+		[]string{
+			"device",
+			"model_family",
+			"model_name",
+			"serial_number",
+		},
+		nil,
+	)
+	metricDeviceCommandsWritten = prometheus.NewDesc(
+		"smartctl_device_commands_written",
+		"",
+		[]string{
+			"device",
+			"model_family",
+			"model_name",
+			"serial_number",
 		},
 		nil,
 	)
